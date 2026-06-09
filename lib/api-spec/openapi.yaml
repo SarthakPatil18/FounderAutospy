@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: PivotVault API — knowledge repository for startup failures
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: startups
+    description: Startup postmortem operations
+  - name: auth
+    description: Authentication operations
+  - name: insights
+    description: Aggregated insights and analytics
 paths:
   /healthz:
     get:
@@ -24,6 +30,235 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /startups:
+    get:
+      operationId: listStartups
+      tags: [startups]
+      summary: List startups
+      description: List all startup postmortems with optional filtering
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name or tagline
+        - name: industry
+          in: query
+          schema:
+            type: string
+          description: Filter by industry
+        - name: failureCause
+          in: query
+          schema:
+            type: string
+          description: Filter by AI-identified failure cause tag
+        - name: year
+          in: query
+          schema:
+            type: ["integer", "null"]
+          description: Filter by closed year
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of startups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartupList"
+    post:
+      operationId: createStartup
+      tags: [startups]
+      summary: Submit a startup postmortem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartupInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Startup"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+
+  /startups/{id}:
+    get:
+      operationId: getStartup
+      tags: [startups]
+      summary: Get a startup postmortem
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Startup postmortem
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Startup"
+        "404":
+          description: Not found
+
+  /startups/{id}/similar:
+    get:
+      operationId: getSimilarStartups
+      tags: [startups]
+      summary: Get similar startup failures
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Similar startups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartupList"
+
+  /insights/summary:
+    get:
+      operationId: getInsightsSummary
+      tags: [insights]
+      summary: Get high-level summary stats
+      responses:
+        "200":
+          description: Summary statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsightsSummary"
+
+  /insights/failure-reasons:
+    get:
+      operationId: getFailureReasons
+      tags: [insights]
+      summary: Top failure reasons by count
+      responses:
+        "200":
+          description: Failure reasons with counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailureReasonList"
+
+  /insights/industries:
+    get:
+      operationId: getIndustryDistribution
+      tags: [insights]
+      summary: Industry distribution of failures
+      responses:
+        "200":
+          description: Industries with counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndustryDistributionList"
+
+  /insights/failures-by-year:
+    get:
+      operationId: getFailuresByYear
+      tags: [insights]
+      summary: Failure count by year
+      responses:
+        "200":
+          description: Failures per year
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FailuresByYearList"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthCredentials"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation or duplicate error
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthCredentials"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +269,211 @@ components:
       required:
         - status
 
+    Startup:
+      type: object
+      required:
+        - id
+        - name
+        - tagline
+        - industry
+        - foundedYear
+        - closedYear
+        - story
+        - whatFailed
+        - lessonsLearned
+        - createdAt
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        tagline:
+          type: string
+        industry:
+          type: string
+        foundedYear:
+          type: integer
+        closedYear:
+          type: integer
+        story:
+          type: string
+        whatFailed:
+          type: string
+        lessonsLearned:
+          type: string
+        peakMrr:
+          type: ["integer", "null"]
+        teamSize:
+          type: ["integer", "null"]
+        totalRaised:
+          type: ["integer", "null"]
+        aiRootCause:
+          type: ["string", "null"]
+        aiFactors:
+          type: ["array", "null"]
+          items:
+            type: string
+        aiTags:
+          type: ["array", "null"]
+          items:
+            type: string
+        submittedBy:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+
+    StartupList:
+      type: object
+      required:
+        - startups
+        - total
+      properties:
+        startups:
+          type: array
+          items:
+            $ref: "#/components/schemas/Startup"
+        total:
+          type: integer
+
+    StartupInput:
+      type: object
+      required:
+        - name
+        - tagline
+        - industry
+        - foundedYear
+        - closedYear
+        - story
+        - whatFailed
+        - lessonsLearned
+      properties:
+        name:
+          type: string
+        tagline:
+          type: string
+        industry:
+          type: string
+        foundedYear:
+          type: integer
+        closedYear:
+          type: integer
+        story:
+          type: string
+        whatFailed:
+          type: string
+        lessonsLearned:
+          type: string
+        peakMrr:
+          type: ["integer", "null"]
+        teamSize:
+          type: ["integer", "null"]
+        totalRaised:
+          type: ["integer", "null"]
+
+    InsightsSummary:
+      type: object
+      required:
+        - totalPostmortems
+        - totalIndustries
+        - topFailureCause
+      properties:
+        totalPostmortems:
+          type: integer
+        totalIndustries:
+          type: integer
+        topFailureCause:
+          type: string
+
+    FailureReason:
+      type: object
+      required:
+        - reason
+        - count
+      properties:
+        reason:
+          type: string
+        count:
+          type: integer
+
+    FailureReasonList:
+      type: array
+      items:
+        $ref: "#/components/schemas/FailureReason"
+
+    IndustryDistribution:
+      type: object
+      required:
+        - industry
+        - count
+      properties:
+        industry:
+          type: string
+        count:
+          type: integer
+
+    IndustryDistributionList:
+      type: array
+      items:
+        $ref: "#/components/schemas/IndustryDistribution"
+
+    FailuresByYear:
+      type: object
+      required:
+        - year
+        - count
+      properties:
+        year:
+          type: integer
+        count:
+          type: integer
+
+    FailuresByYearList:
+      type: array
+      items:
+        $ref: "#/components/schemas/FailuresByYear"
+
+    AuthCredentials:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+
+    AuthResponse:
+      type: object
+      required:
+        - user
+        - token
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - createdAt
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        createdAt:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
