@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "PivotVault"
+version = "1.0.0"
+id = "artifacts/pivot-vault"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20358
+
+[services.development]
+run = "pnpm --filter @workspace/pivot-vault run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pivot-vault", "run", "build" ]
+publicDir = "artifacts/pivot-vault/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20358"
+BASE_PATH = "/"

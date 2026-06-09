@@ -1,0 +1,169 @@
+Build a full-stack web app called PivotVault — a knowledge repository for startup failures, styled precisely to match the Vercel design system.
+
+── DESIGN SYSTEM ────────────────────────────────────────────
+
+Fonts (load via Google Fonts):
+  - Body/Display: Inter (weights 400, 500, 600) — use font-feature-settings: "ss01", "ss02"
+  - Monospace: JetBrains Mono (weight 400)
+
+Color tokens (define as CSS variables in :root):
+  --color-ink:           #171717;
+  --color-body:          #4d4d4d;
+  --color-mute:          #888888;
+  --color-canvas:        #ffffff;
+  --color-canvas-soft:   #fafafa;
+  --color-canvas-soft-2: #f5f5f5;
+  --color-hairline:      #ebebeb;
+  --color-link:          #0070f3;
+  --color-on-primary:    #ffffff;
+
+Spacing scale (4px base):
+  --sp-xs: 8px; --sp-sm: 12px; --sp-md: 16px;
+  --sp-lg: 24px; --sp-xl: 32px; --sp-2xl: 40px;
+  --sp-4xl: 64px; --sp-5xl: 96px;
+
+Border radius:
+  --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --r-pill: 100px; --r-full: 9999px;
+
+Elevation (stacked shadows, never single heavy drop):
+  --shadow-card: 0px 2px 2px #0000000a, 0px 8px 8px -8px #0000000a, inset 0 0 0 1px #00000014;
+  --shadow-float: 0px 2px 2px #0000000a, 0px 8px 16px -4px #0000000a, inset 0 0 0 1px #00000014;
+
+Brand gradient (hero use only, full multi-stop mesh):
+  background: linear-gradient(135deg, #007cf0, #00dfd8, #7928ca, #ff0080, #ff4d4d, #f9cb28);
+
+Typography rules:
+  - Headlines: Inter 600, sentence-case, letter-spacing -2.4px at 48px hero / -1.28px at 32px sections
+  - Body: Inter 400, 16–18px
+  - Buttons (marketing): Inter 500, 16px, pill shape (border-radius: var(--r-pill))
+  - Nav buttons: Inter 500, 14px, border-radius: var(--r-sm) 6px, height 28px
+  - Code/eyebrows/labels: JetBrains Mono 400, 12–13px
+
+Button rules:
+  Primary (marketing): bg #171717, text white, border-radius 100px, padding 0 12px, height ~48px
+  Secondary (marketing): bg white, text #171717, border: 1px solid #ebebeb, same pill shape
+  Nav Sign Up: bg #171717, text white, border-radius 6px, height 28px
+  Nav Log In: bg white, text #171717, border-radius 6px, height 28px
+
+Page band rhythm: canvas-soft (#fafafa) → canvas (#fff) → primary dark (#171717) polarity-flip
+
+── TECH STACK ────────────────────────────────────────────────
+
+Backend: Node.js + Express
+Database: PostgreSQL (or SQLite for MVP) via Prisma ORM
+Frontend: Vanilla HTML/CSS/JS or React (your choice)
+AI: OpenAI API (GPT-4o) for failure analysis
+Auth: Simple email/password or magic link
+
+── PAGES & FEATURES ──────────────────────────────────────────
+
+1. HOME PAGE
+   Nav bar:
+     - Left: "PivotVault" wordmark in Inter 600, #171717
+     - Center: nav links (Explore / Insights / Submit) in Inter 400, 14px, #4d4d4d
+     - Right: "Log In" (nav style white btn) + "Submit Story" (nav style black btn)
+     - Sticky, 64px height, white bg, 1px bottom border #ebebeb
+
+   Hero band:
+     - Full-width section, white bg, padding 96px 24px
+     - Mesh gradient backdrop (the 6-stop gradient above) filling ~top half, behind content
+     - Mono eyebrow badge: "/ startup knowledge base" in JetBrains Mono 12px, canvas-soft bg, pill shape
+     - H1: "Every failed startup deserves to teach something." — Inter 600, 48px, -2.4px tracking
+     - Lead: "PivotVault is the open knowledge base of startup failures. Real postmortems. Real lessons." — Inter 400, 18px, #4d4d4d
+     - CTA row: "Submit a Postmortem" (primary black pill) + "Explore Failures" (secondary white pill)
+
+   Logo strip: "Trusted by founders from [company names as mono text]" — subtle, #888 text
+
+   Feature band (3-up cards, white bg):
+     - Card 1: "Postmortems" — founders document full startup journeys
+     - Card 2: "AI Root Cause Analysis" — GPT-4o extracts failure patterns
+     - Card 3: "Similar Failure Matching" — find startups that failed like yours
+     Each card: white bg, border-radius 8px, var(--shadow-card), padding 24px
+     Card headline: Inter 600, 20px; body: Inter 400, 16px, #4d4d4d
+
+   Dark band (polarity-flipped, bg #171717):
+     - Headline: "The patterns hiding in failure." white Inter 600 32px
+     - Shows an animated or static code-editor-style mockup (dark rectangle, mono font, bg #171717) displaying a fake AI analysis JSON output
+
+   Insights band (canvas-soft bg #fafafa):
+     - 3-up stat cards: "214 Postmortems", "47 Industries", "Top failure: PMF mismatch"
+     - Each stat card: white bg, border-radius 8px, shadow-card
+
+2. EXPLORE PAGE
+   - Search bar (form-input style: white bg, 1px border #ebebeb, border-radius 6px, height 40px)
+   - Filter pills (tab-ghost style: white bg, border-radius 64px, padding 0 16px) for industry/year/cause
+   - Grid of startup cards (template-card style): name, tagline, year founded, year died, top failure tag
+   - Each card: white bg, 8px radius, shadow-card, 16px padding, monospace tag label
+
+3. POSTMORTEM PAGE (individual startup)
+   - Header band: startup name in display-xl, mono eyebrow "/ postmortem", year range, industry badge
+   - Timeline section: visual timeline component, each milestone as a row
+   - Metrics section: 3-up stat cards (peak MRR, team size, runway used)
+   - Story section: full narrative in body-md (Inter 16px, #4d4d4d, line-height 1.6)
+   - AI Analysis box: dark card (bg #171717), mono-style output of root causes extracted by GPT-4o
+     Display: "Root causes identified:", then a list of causes as mono-font tags
+   - Similar Failures section: 3 related startup cards, same template-card style
+
+4. SUBMIT PAGE
+   - Auth gate (simple — email + password)
+   - Multi-step form:
+     Step 1: Startup basics (name, tagline, industry, founded/closed year)
+     Step 2: The story (textarea — "What did you build? Who for?")
+     Step 3: What failed (textarea + checkbox list of common failure types)
+     Step 4: Metrics (peak MRR, team size, total raised — optional)
+     Step 5: Lessons learned (textarea)
+   - Form inputs: height 40px, border-radius 6px, 1px border #ebebeb
+   - Progress indicator: mono-font step counter "01 / 05" above each step
+   - Submit button: primary black pill, full-width on mobile
+
+5. INSIGHTS DASHBOARD
+   - Page headline: "Failure patterns across industries." Inter 600 32px -1.28px tracking
+   - Charts (use Chart.js): 
+       Bar chart: Top 10 failure reasons
+       Donut chart: Industry distribution
+       Line chart: Failure count by year
+   - All charts on white cards with shadow-card elevation
+   - Chart labels: JetBrains Mono 12px
+
+── AI INTEGRATION ────────────────────────────────────────────
+
+When a new postmortem is submitted, send the story + metrics to OpenAI GPT-4o:
+
+System prompt: "You are an expert startup analyst. Given a startup's postmortem, extract: 1) Primary root cause (one sentence), 2) Contributing factors (3-5 bullet points), 3) Category tags from this list: [PMF mismatch, Cash flow, Team conflict, Market timing, Competition, Tech debt, Regulatory, Execution, Customer acquisition, Pivot failure]. Respond in JSON."
+
+Store the AI analysis alongside the postmortem in the database.
+Display it in the dark code-editor-mockup card on the postmortem page.
+
+── DATABASE SCHEMA ───────────────────────────────────────────
+
+Table: startups
+  id, name, tagline, industry, founded_year, closed_year,
+  story, what_failed, lessons_learned,
+  peak_mrr, team_size, total_raised,
+  ai_root_cause, ai_factors (JSON), ai_tags (array),
+  submitted_by, created_at
+
+Table: users
+  id, email, password_hash, created_at
+
+── SEED DATA ─────────────────────────────────────────────────
+
+Pre-seed with 6 famous failed startups:
+  1. Quibi — streaming, 2018–2020, PMF mismatch
+  2. Theranos — healthtech, 2003–2018, fraud/execution
+  3. Juicero — hardware, 2013–2017, market timing + overengineering
+  4. MoviePass — subscriptions, 2011–2019, unit economics
+  5. Vine — social/video, 2012–2017, competition + creator monetization
+  6. Jawbone — wearables, 2010–2017, execution + cash flow
+
+── FINAL NOTES ───────────────────────────────────────────────
+
+- Never use heavy single drop-shadows. Always use the stacked --shadow-card or --shadow-float variables.
+- Never uppercase headlines — sentence-case always.
+- Never use Inter weight 700+. Max display weight is 600.
+- The mesh gradient goes ONLY on the hero band, at full atmospheric scale.
+- Section eyebrows and AI analysis output use JetBrains Mono — never Inter for those.
+- Page rhythm alternates: #fafafa → #ffffff → #171717 dark band → #fafafa.
+- Mobile: nav collapses to hamburger, 3-up grids drop to 1-up, pill CTAs stay full-radius.
+
+Build this as a working MVP. Prioritize: home page, explore page, one full postmortem page, and the submit flow.
