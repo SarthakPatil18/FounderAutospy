@@ -42,7 +42,7 @@ export default function StartupDetail() {
             <span className="font-sans text-sm font-medium text-[#4d4d4d]">Submitted by founder</span>
           </div>
 
-          <div className="grid grid-cols-3 gap-6 pt-8 border-t border-[#ebebeb]">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-8 border-t border-[#ebebeb]">
             <div>
               <div className="font-mono text-xs text-[#888888] uppercase tracking-wider mb-2">Peak MRR</div>
               <div className="font-sans font-semibold text-2xl text-[#171717]">{formatCurrency(startup.peakMrr)}</div>
