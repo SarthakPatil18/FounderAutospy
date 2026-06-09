@@ -12,6 +12,10 @@ import StartupDetail from "@/pages/startup-detail";
 import Insights from "@/pages/insights";
 import NotFound from "@/pages/not-found";
 import { Nav } from "@/components/layout/nav";
+import { setBaseUrl } from "@workspace/api-client-react";
+
+// Set base API URL for production
+setBaseUrl(import.meta.env.VITE_API_URL || null);
 
 const queryClient = new QueryClient();
 

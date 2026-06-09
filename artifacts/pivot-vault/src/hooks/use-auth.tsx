@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 
+const API_URL = import.meta.env.VITE_API_URL || "";
+
 interface User {
   id: number;
   email: string;
@@ -38,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        const res = await fetch("/api/auth/me", {
+        const res = await fetch(`${API_URL}/api/auth/me`, {
           headers: {
             Authorization: `Bearer ${storedToken}`,
           },
@@ -63,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setError(null);
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -85,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (email: string, password: string) => {
     setError(null);
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
