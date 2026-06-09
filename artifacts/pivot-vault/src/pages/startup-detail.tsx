@@ -1,5 +1,5 @@
 import { useParams } from "wouter";
-import { useGetStartup, useGetSimilarStartups, getGetStartupQueryKey } from "@workspace/api-client-react";
+import { useGetStartup, useGetSimilarStartups, getGetStartupQueryKey, getGetSimilarStartupsQueryKey } from "@workspace/api-client-react";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { StartupCard } from "@/components/startup-card";
 
@@ -12,7 +12,7 @@ export default function StartupDetail() {
   });
 
   const { data: similar } = useGetSimilarStartups(id, {
-    query: { enabled: !!id }
+    query: { enabled: !!id, queryKey: getGetSimilarStartupsQueryKey(id) }
   });
 
   if (isLoading) {

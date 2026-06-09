@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { db, startupsTable } from "@workspace/db";
-import { eq, ilike, or, sql, and, inArray } from "drizzle-orm";
+import { db } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { runAutopsy } from "../lib/gemini";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
-router.get("/startups", async (req, res) => {
+router.get("/startups", async (req: any, res: any): Promise<void> => {
   try {
     const { search, industry, failureCause, year, limit = "20", offset = "0" } =
       req.query as Record<string, string>;
@@ -14,59 +14,65 @@ router.get("/startups", async (req, res) => {
     const limitNum = Math.min(parseInt(limit) || 20, 100);
     const offsetNum = parseInt(offset) || 0;
 
-    const conditions = [];
+    // Build conditions for Prisma
+    const conditions: any[] = [];
 
     if (search) {
-      conditions.push(
-        or(
-          ilike(startupsTable.name, `%${search}%`),
-          ilike(startupsTable.tagline, `%${search}%`),
-        ),
-      );
+      conditions.push({
+        OR: [
+          { name: { contains: search } },
+          { tagline: { contains: search } },
+        ],
+      });
     }
 
     if (industry) {
-      conditions.push(ilike(startupsTable.industry, `%${industry}%`));
+      conditions.push({
+        industry: { contains: industry },
+      });
     }
 
     if (year) {
-      conditions.push(eq(startupsTable.closedYear, parseInt(year)));
+      conditions.push({
+        closedYear: parseInt(year),
+      });
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = conditions.length > 0 ? { AND: conditions } : {};
 
-    let startups = await db
-      .select()
-      .from(startupsTable)
-      .where(whereClause)
-      .orderBy(sql`${startupsTable.createdAt} DESC`)
-      .limit(limitNum)
-      .offset(offsetNum);
+    let startups = await db.startup.findMany({
+      where: whereClause,
+      orderBy: { createdAt: "desc" },
+      take: limitNum,
+      skip: offsetNum,
+    });
 
     if (failureCause) {
-      startups = startups.filter((s) =>
-        s.aiTags?.some((tag) =>
-          tag.toLowerCase().includes(failureCause.toLowerCase()),
-        ),
-      );
+      startups = startups.filter((s) => {
+        const tags = parseJsonField(s.aiTags);
+        return tags.some((tag) =>
+          tag.toLowerCase().includes(failureCause.toLowerCase())
+        );
+      });
     }
 
-    const total = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(startupsTable)
-      .where(whereClause);
+    const total = await db.startup.count({
+      where: whereClause,
+    });
 
     res.json({
       startups: startups.map(mapStartup),
-      total: Number(total[0]?.count ?? 0),
+      total,
     });
+    return;
   } catch (err) {
     req.log.error({ err }, "Failed to list startups");
     res.status(500).json({ error: "Internal server error" });
+    return;
   }
 });
 
-router.post("/startups", async (req, res) => {
+router.post("/startups", requireAuth, async (req: any, res: any): Promise<void> => {
   try {
     const {
       name, tagline, industry, foundedYear, closedYear,
@@ -75,14 +81,14 @@ router.post("/startups", async (req, res) => {
     } = req.body;
 
     if (!name || !tagline || !industry || !foundedYear || !closedYear || !story || !whatFailed || !lessonsLearned) {
-      return res.status(400).json({ error: "Missing required fields" });
+      res.status(400).json({ error: "Missing required fields" });
+      return;
     }
 
-    const submittedBy = (req as any).auth?.userId ? 1 : undefined;
+    const submittedBy = req.auth.userId;
 
-    const [startup] = await db
-      .insert(startupsTable)
-      .values({
+    const startup = await db.startup.create({
+      data: {
         name,
         tagline,
         industry,
@@ -91,12 +97,12 @@ router.post("/startups", async (req, res) => {
         story,
         whatFailed,
         lessonsLearned,
-        peakMrr: peakMrr ? parseInt(peakMrr) : undefined,
-        teamSize: teamSize ? parseInt(teamSize) : undefined,
-        totalRaised: totalRaised ? parseInt(totalRaised) : undefined,
+        peakMrr: peakMrr ? parseInt(peakMrr) : null,
+        teamSize: teamSize ? parseInt(teamSize) : null,
+        totalRaised: totalRaised ? parseInt(totalRaised) : null,
         submittedBy,
-      })
-      .returning();
+      },
+    });
 
     res.status(201).json(mapStartup(startup));
 
@@ -104,69 +110,83 @@ router.post("/startups", async (req, res) => {
     runAutopsy(name, story, whatFailed, lessonsLearned)
       .then(async (result) => {
         if (!result) return;
-        await db
-          .update(startupsTable)
-          .set({
+        await db.startup.update({
+          where: { id: startup.id },
+          data: {
             aiRootCause: result.rootCause,
             aiFactors: result.factors,
             aiTags: result.tags,
             aiVerdict: result.verdict,
-          })
-          .where(eq(startupsTable.id, startup.id));
+          },
+        });
         logger.info({ id: startup.id }, "Autopsy complete");
       })
       .catch((err) => logger.error({ err }, "Autopsy failed"));
+    return;
   } catch (err) {
     req.log.error({ err }, "Failed to create startup");
     res.status(500).json({ error: "Internal server error" });
+    return;
   }
 });
 
-router.get("/startups/:id", async (req, res) => {
+router.get("/startups/:id", async (req: any, res: any): Promise<void> => {
   try {
     const id = parseInt(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
 
-    const [startup] = await db
-      .select()
-      .from(startupsTable)
-      .where(eq(startupsTable.id, id));
+    const startup = await db.startup.findUnique({
+      where: { id },
+    });
 
-    if (!startup) return res.status(404).json({ error: "Not found" });
+    if (!startup) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
 
     res.json(mapStartup(startup));
+    return;
   } catch (err) {
     req.log.error({ err }, "Failed to get startup");
     res.status(500).json({ error: "Internal server error" });
+    return;
   }
 });
 
-router.get("/startups/:id/similar", async (req, res) => {
+router.get("/startups/:id/similar", async (req: any, res: any): Promise<void> => {
   try {
     const id = parseInt(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
 
-    const [startup] = await db
-      .select()
-      .from(startupsTable)
-      .where(eq(startupsTable.id, id));
+    const startup = await db.startup.findUnique({
+      where: { id },
+    });
 
-    if (!startup) return res.status(404).json({ error: "Not found" });
+    if (!startup) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
 
-    const tags = startup.aiTags ?? [];
+    const tags = parseJsonField(startup.aiTags);
     const industry = startup.industry;
 
-    let similar = await db
-      .select()
-      .from(startupsTable)
-      .orderBy(sql`${startupsTable.createdAt} DESC`)
-      .limit(50);
+    const similar = await db.startup.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
 
     // Score by shared tags and industry
     const scored = similar
       .filter((s) => s.id !== id)
       .map((s) => {
-        const sharedTags = (s.aiTags ?? []).filter((t) => tags.includes(t));
+        const sTags = parseJsonField(s.aiTags);
+        const sharedTags = sTags.filter((t) => tags.includes(t));
         const sameIndustry = s.industry.toLowerCase() === industry.toLowerCase();
         return { startup: s, score: sharedTags.length * 2 + (sameIndustry ? 1 : 0) };
       })
@@ -188,13 +208,28 @@ router.get("/startups/:id/similar", async (req, res) => {
       startups: scored.map((s) => mapStartup(s.startup)),
       total: scored.length,
     });
+    return;
   } catch (err) {
     req.log.error({ err }, "Failed to get similar startups");
     res.status(500).json({ error: "Internal server error" });
+    return;
   }
 });
 
-function mapStartup(s: typeof startupsTable.$inferSelect) {
+function parseJsonField(val: any): string[] {
+  if (!val) return [];
+  if (typeof val === "string") {
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return Array.isArray(val) ? (val as string[]) : [];
+}
+
+function mapStartup(s: any) {
   return {
     id: s.id,
     name: s.name,
@@ -209,11 +244,11 @@ function mapStartup(s: typeof startupsTable.$inferSelect) {
     teamSize: s.teamSize ?? null,
     totalRaised: s.totalRaised ?? null,
     aiRootCause: s.aiRootCause ?? null,
-    aiFactors: s.aiFactors ?? null,
-    aiTags: s.aiTags ?? null,
+    aiFactors: parseJsonField(s.aiFactors),
+    aiTags: parseJsonField(s.aiTags),
     aiVerdict: s.aiVerdict ?? null,
     submittedBy: s.submittedBy ?? null,
-    createdAt: s.createdAt.toISOString(),
+    createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : s.createdAt,
   };
 }
 

@@ -13,8 +13,8 @@ export default function Home() {
       <section className="relative w-full bg-white px-6 py-24 overflow-hidden">
         {/* Mesh gradient backdrop */}
         <div 
-          className="absolute inset-x-0 top-0 h-1/2 opacity-[0.08] pointer-events-none"
-          style={{ background: 'linear-gradient(135deg, #007cf0, #00dfd8, #7928ca, #ff0080, #ff4d4d, #f9cb28)', filter: 'blur(60px)' }}
+          className="absolute top-0 left-[-20%] w-[140%] h-[500px] opacity-[0.16] pointer-events-none animate-mesh"
+          style={{ background: 'linear-gradient(135deg, #007cf0, #00dfd8, #7928ca, #ff0080, #ff4d4d, #f9cb28)', filter: 'blur(80px)' }}
         />
         
         <div className="max-w-4xl mx-auto relative z-10 text-center">

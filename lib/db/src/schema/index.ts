@@ -1,1 +1,1 @@
-export * from "./startups";
+export {};

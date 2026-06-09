@@ -76,7 +76,7 @@ Be precise, clinical, and direct. No hedging.`;
       return null;
     }
 
-    const data = await res.json();
+    const data = (await res.json()) as any;
     const rawText: string =
       data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
