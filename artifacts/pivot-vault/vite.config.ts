@@ -53,6 +53,9 @@ export default defineConfig({
     },
     dedupe: ["react", "react-dom"],
   },
+  optimizeDeps: {
+    include: ["react", "react-dom", "react/jsx-runtime", "wouter"],
+  },
   root: path.resolve(import.meta.dirname),
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
