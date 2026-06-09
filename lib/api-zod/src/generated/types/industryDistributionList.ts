@@ -5,7 +5,6 @@
  * FounderAutopsy API — the first platform where founders document their own startup shutdowns
  * OpenAPI spec version: 0.1.0
  */
+import type { IndustryDistribution } from './industryDistribution';
 
-export interface HealthStatus {
-  status: string;
-}
+export type IndustryDistributionList = IndustryDistribution[];

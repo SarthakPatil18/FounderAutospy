@@ -1,0 +1,371 @@
+Build a full-stack web app called FounderAutopsy — the first platform where founders document their own startup shutdowns, and AI performs a structured autopsy so the next founder doesn't repeat the same mistake.
+
+Tagline: "What killed the company. Precisely."
+Domain intent: founderautopsy.com
+
+── WHAT MAKES THIS DIFFERENT (USPs — build every one of these) ──────────────
+
+USP 1 — Founder-submitted postmortems (PRIMARY)
+  No editorial team, no scraping TechCrunch.
+  The actual founder writes their own shutdown story.
+  This is primary source data. Nobody else has it.
+  Every postmortem page must feel like a founder wrote it, not a journalist.
+
+USP 2 — AI autopsy engine (PRIMARY)
+  After submission, send the full postmortem to OpenAI GPT-4o.
+  AI produces a structured "autopsy report":
+    - Primary cause of death (1 sentence)
+    - Contributing factors (3-5 bullet points)
+    - Failure category tags from: [PMF mismatch, Cash flow, Team conflict,
+      Market timing, Competition, Tech debt, Regulatory, Execution,
+      Customer acquisition, Pivot failure]
+    - Autopsy verdict (2-3 sentence summary, clinical tone)
+  Display this in a dark code-editor-style card on the postmortem page.
+  Label it "/ autopsy report" in monospace above the card.
+
+USP 3 — Similar failure matching
+  After AI tagging, query the DB for other startups with overlapping failure tags.
+  Show "3 startups that died the same way" at the bottom of every postmortem.
+  Each matched card shows: name, industry, year, shared failure tag highlighted.
+
+USP 4 — Free and open forever
+  No paywall. No login required to read.
+  Login only required to submit a postmortem.
+  Add a visible line on the homepage: "Free forever. No paywall. Community-built."
+
+── DESIGN SYSTEM (Vercel-inspired) ─────────────────────────────────────────
+
+Fonts (load via Google Fonts):
+  - Display/Body: Inter (weights 400, 500, 600)
+    font-feature-settings: "ss01", "ss02"
+  - Monospace: JetBrains Mono (weight 400)
+
+CSS Variables in :root:
+  --ink:           #171717;
+  --body-text:     #4d4d4d;
+  --mute:          #888888;
+  --canvas:        #ffffff;
+  --canvas-soft:   #fafafa;
+  --canvas-soft-2: #f5f5f5;
+  --hairline:      #ebebeb;
+  --link:          #0070f3;
+  --on-primary:    #ffffff;
+
+  --shadow-card:  0px 2px 2px #0000000a, 0px 8px 8px -8px #0000000a, inset 0 0 0 1px #00000014;
+  --shadow-float: 0px 2px 2px #0000000a, 0px 8px 16px -4px #0000000a, inset 0 0 0 1px #00000014;
+
+  --r-sm:   6px;
+  --r-md:   8px;
+  --r-lg:   12px;
+  --r-pill: 100px;
+  --r-full: 9999px;
+
+Brand gradient (hero use only):
+  background: linear-gradient(135deg, #007cf0, #00dfd8, #7928ca, #ff0080, #ff4d4d, #f9cb28);
+
+Typography rules:
+  - H1 hero: Inter 600, 48px, letter-spacing -2.4px, sentence-case, ends with period
+  - Section headlines: Inter 600, 32px, letter-spacing -1.28px
+  - Card headlines: Inter 600, 24px, letter-spacing -0.96px
+  - Body lead: Inter 400, 18px
+  - Body default: Inter 400, 16px
+  - Nav links: Inter 400, 14px
+  - Eyebrows / labels / AI output: JetBrains Mono 400, 12px
+  - NEVER use Inter weight 700+. Max is 600.
+  - NEVER uppercase headlines. Sentence-case always.
+
+Buttons:
+  Primary pill (marketing): bg #171717, text white, border-radius 100px, padding 14px 24px
+  Secondary pill: bg white, text #171717, border 1px solid #ebebeb, same pill shape
+  Nav primary: bg #171717, text white, border-radius 6px, height 28px, padding 0 8px
+  Nav secondary: bg white, text #171717, border 1px solid #ebebeb, border-radius 6px, height 28px
+
+Page band rhythm (alternate these):
+  Band A: bg #fafafa (canvas-soft)
+  Band B: bg #ffffff (canvas white)
+  Band C: bg #171717 (dark polarity-flip, white text)
+
+Elevation: always use --shadow-card or --shadow-float. NEVER a single heavy drop-shadow.
+
+── TECH STACK ───────────────────────────────────────────────────────────────
+
+Backend:  Node.js + Express
+Database: PostgreSQL via Prisma ORM (SQLite fine for MVP)
+Frontend: React or vanilla HTML/CSS/JS
+AI:       OpenAI GPT-4o via API (store key in .env as OPENAI_API_KEY)
+Auth:     Email + password (bcrypt + JWT), or magic link
+Charts:   Chart.js
+
+── DATABASE SCHEMA ──────────────────────────────────────────────────────────
+
+Table: startups
+  id                UUID primary key
+  name              TEXT not null
+  tagline           TEXT
+  industry          TEXT
+  founded_year      INT
+  closed_year       INT
+  story             TEXT          -- founder's full narrative
+  what_failed       TEXT          -- what went wrong
+  lessons_learned   TEXT          -- key takeaways
+  peak_mrr          INT           -- in USD, optional
+  team_size         INT           -- optional
+  total_raised      INT           -- in USD, optional
+  ai_root_cause     TEXT          -- GPT output: primary cause
+  ai_factors        JSONB         -- GPT output: contributing factors array
+  ai_tags           TEXT[]        -- GPT output: failure category tags
+  ai_verdict        TEXT          -- GPT output: 2-3 sentence summary
+  submitted_by      UUID          -- FK to users
+  created_at        TIMESTAMP
+
+Table: users
+  id                UUID primary key
+  email             TEXT unique
+  password_hash     TEXT
+  name              TEXT
+  created_at        TIMESTAMP
+
+── PAGES ────────────────────────────────────────────────────────────────────
+
+1. HOME PAGE
+
+  Nav (sticky, 64px, white bg, 1px bottom border #ebebeb):
+    Left:   "FounderAutopsy" in Inter 600, #171717
+    Center: links — Explore / Insights / Submit Your Story
+    Right:  "Log In" (nav secondary btn) + "Submit Story" (nav primary btn)
+
+  Hero band (Band B — white, padding 96px 24px):
+    Mesh gradient backdrop behind content (6-stop, top half of band)
+    Mono eyebrow: "/ startup failure knowledge base" — JetBrains Mono 12px, pill badge
+    H1: "What killed the company. Precisely." — Inter 600 48px -2.4px tracking
+    Lead: "FounderAutopsy is the first open platform where founders document
+           their own shutdowns — and AI performs the autopsy." — Inter 400 18px #4d4d4d
+    CTA row: "Submit Your Postmortem" (primary pill) + "Explore Autopsies" (secondary pill)
+    Sub-note below CTAs: "Free forever. No paywall. Community-built." — 13px #888
+
+  USP strip (Band A — canvas-soft, padding 64px 24px):
+    4-up icon cards, each with a Tabler icon, headline, 1-line description:
+      Card 1 — icon: ti-writing  — "Founder-written" — "Every entry by the actual founder. Primary source, not journalism."
+      Card 2 — icon: ti-brain    — "AI autopsy engine" — "GPT-4o diagnoses root cause, factors, and failure tags."
+      Card 3 — icon: ti-git-merge — "Similar failure matching" — "See every startup that died the same way yours did."
+      Card 4 — icon: ti-lock-open — "Free and open" — "No paywall. No gatekeeping. Built by the founder community."
+    Each card: white bg, border-radius 8px, var(--shadow-card), padding 24px
+
+  Dark band (Band C — bg #171717, padding 96px 24px):
+    Headline: "The autopsy report every founder needs to read." — Inter 600 32px white
+    Sub: "AI reads the full postmortem and returns a structured diagnosis." — Inter 400 18px #888
+    Show a static dark code-editor mockup card (bg #1e1e1e, border-radius 8px, padding 24px):
+      Display fake JSON autopsy output in JetBrains Mono 13px:
+        {
+          "primary_cause": "PMF mismatch — built for market that didn't exist yet",
+          "contributing_factors": [
+            "Raised too early before validating demand",
+            "Hired ahead of revenue",
+            "Pivoted 3 times in 18 months"
+          ],
+          "tags": ["PMF mismatch", "Cash flow", "Pivot failure"],
+          "verdict": "Classic premature scaling. The product had signal but
+                      the market needed 3 more years to develop."
+        }
+      Color the keys in #50e3c2 (teal), strings in #f9cb28 (amber)
+
+  Recent postmortems (Band A — canvas-soft):
+    Section eyebrow: "/ recent autopsies" in JetBrains Mono
+    Headline: "Latest from the community." Inter 600 32px
+    3-up grid of startup cards (template-card style):
+      Each: name, industry badge, year range, one-line tagline, top AI tag
+      White bg, border-radius 8px, shadow-card, 16px padding
+
+  Stats band (Band B — white, padding 64px 24px):
+    3 stat cards in a row:
+      "214 Postmortems" / "47 Industries covered" / "Top cause: PMF mismatch"
+    Each: white bg, border-radius 8px, shadow-card
+    Number: Inter 600 48px #171717; label: JetBrains Mono 12px #888
+
+2. EXPLORE PAGE
+
+  Page headline: "Explore every autopsy." Inter 600 32px -1.28px
+  Sub: "Filter by industry, failure type, or year." Inter 400 18px #4d4d4d
+
+  Search bar: full-width, height 40px, border-radius 6px, border 1px solid #ebebeb
+  Filter pills row (tab-ghost style, border-radius 64px, padding 0 16px):
+    Industry / Failure type / Year / Sort: Recent | Most discussed
+
+  Grid of startup cards:
+    Each card (white bg, 8px radius, shadow-card, 16px padding):
+      Top-left: startup name Inter 600 16px
+      Top-right: year range in JetBrains Mono 12px #888
+      Below name: industry badge (pill, canvas-soft bg, #4d4d4d text, 12px mono)
+      Body: one-line tagline in Inter 400 14px #4d4d4d
+      Bottom: AI failure tags as colored pills
+        PMF mismatch = teal bg  |  Cash flow = amber  |  Team conflict = red-soft
+      Hover: slight scale(1.01), shadow-float
+
+3. POSTMORTEM PAGE (individual startup)
+
+  Header band (Band B — white, padding 64px 24px):
+    Mono eyebrow: "/ postmortem" in JetBrains Mono 12px pill badge
+    H1: startup name — Inter 600 48px -2.4px
+    Row: industry badge | founded_year–closed_year | "Submitted by [founder name]"
+    3 metric stat cards: Peak MRR / Team size / Total raised
+
+  Timeline section (Band A):
+    Section eyebrow: "/ timeline"
+    Visual vertical timeline: key milestones as rows
+    Each row: date (mono, left), event title (Inter 500), description (Inter 400 14px)
+
+  The story section (Band B):
+    Section eyebrow: "/ the story"
+    Full narrative text: Inter 400 18px #4d4d4d, line-height 1.7, max-width 720px centered
+
+  What failed section (Band A):
+    Section eyebrow: "/ what went wrong"
+    Founder's words in a card with left-border accent (#171717, 3px)
+
+  AI Autopsy Report section (Band C — dark, bg #171717):
+    Section eyebrow: "/ autopsy report" in JetBrains Mono, teal color #50e3c2
+    Headline: "AI diagnosis." white Inter 600 32px
+    Sub: "GPT-4o analyzed this postmortem and returned the following." white 16px #888
+    Dark card (bg #1a1a1a, border-radius 12px, padding 32px):
+      Primary cause: large white text, Inter 600 24px
+      Contributing factors: bulleted list, Inter 400 16px #aaa
+      Tags: colored pills row
+      Verdict: Inter 400 16px #888, italic
+    Small disclaimer below: "AI-generated analysis. May contain errors." JetBrains Mono 11px #555
+
+  Lessons learned section (Band A):
+    Section eyebrow: "/ lessons learned"
+    Founder's lessons in clean card
+
+  Similar failures section (Band B):
+    Section eyebrow: "/ died the same way"
+    Headline: "3 startups that failed for similar reasons."
+    3-up template-card grid, shared tag highlighted in each
+
+4. SUBMIT PAGE (auth-gated)
+
+  Auth gate: simple email + password modal before reaching the form
+  
+  Multi-step form (5 steps, show progress as "01 / 05" in JetBrains Mono):
+
+    Step 1 — The basics
+      Startup name (text input)
+      One-line tagline (text input)
+      Industry (select dropdown)
+      Founded year / Closed year (number inputs, side by side)
+
+    Step 2 — The story
+      "Tell us what you built and who you built it for." (label)
+      Large textarea, min-height 200px, Inter 400 16px
+
+    Step 3 — What failed
+      "What went wrong?" (label)
+      Large textarea
+      + Checkbox list of failure types (pre-select one or more):
+        [ ] PMF mismatch  [ ] Cash flow  [ ] Team conflict
+        [ ] Market timing [ ] Competition [ ] Tech debt
+        [ ] Regulatory    [ ] Execution  [ ] Customer acquisition
+        [ ] Pivot failure
+
+    Step 4 — The numbers (all optional)
+      Peak MRR ($ number input)
+      Team size at peak (number input)
+      Total raised ($ number input)
+      Fields labeled as optional in muted text
+
+    Step 5 — Lessons
+      "What should the next founder know?" (label)
+      Large textarea
+
+  Submit button: "Submit for autopsy" — primary black pill, full width on mobile
+  After submit: show loading state "Running autopsy..." then redirect to postmortem page
+
+5. INSIGHTS DASHBOARD
+
+  Page headline: "Failure patterns across the graveyard." Inter 600 32px -1.28px
+  Sub: "What kills startups. By the numbers." Inter 400 18px #4d4d4d
+
+  4 stat cards row: Total postmortems / Industries / Most common cause / Avg runway used
+
+  Charts (Chart.js, all on white shadow-card cards):
+    Bar chart:    Top 10 failure reasons (horizontal bars)
+    Donut chart:  Industry breakdown
+    Line chart:   Postmortems submitted by year
+    Bar chart:    Avg team size by failure type
+
+  All chart labels: JetBrains Mono 12px
+  All chart cards: white bg, border-radius 8px, shadow-card, padding 24px
+
+── AI AUTOPSY ENGINE ────────────────────────────────────────────────────────
+
+Trigger: after a postmortem is submitted and saved to DB
+
+API call to OpenAI GPT-4o:
+
+System prompt:
+  "You are an expert startup analyst performing a clinical autopsy on a failed startup.
+   Be precise, analytical, and brutally honest. Do not sugarcoat.
+   Your tone is that of a forensic investigator, not a motivational speaker.
+   Respond ONLY in valid JSON. No markdown, no preamble."
+
+User prompt:
+  "Startup: [name]
+   Industry: [industry]
+   Founded: [year] | Closed: [year]
+   Story: [story text]
+   What failed: [what_failed text]
+   Lessons: [lessons_learned text]
+   Metrics: Peak MRR $[x], Team [x], Raised $[x]
+
+   Return this exact JSON structure:
+   {
+     'primary_cause': 'one sentence',
+     'contributing_factors': ['factor 1', 'factor 2', 'factor 3'],
+     'tags': ['tag1', 'tag2'],
+     'verdict': '2-3 sentence clinical summary'
+   }
+
+   Tags must be chosen ONLY from:
+   PMF mismatch, Cash flow, Team conflict, Market timing, Competition,
+   Tech debt, Regulatory, Execution, Customer acquisition, Pivot failure"
+
+On response: parse JSON, save all fields to the startups table, then run
+similar failure matching by querying for startups sharing >=1 tag.
+
+── SEED DATA ────────────────────────────────────────────────────────────────
+
+Pre-seed with these 8 famous failed startups.
+Write realistic fake postmortems in the founder's voice for each.
+Run each through the AI autopsy and store results.
+
+  1. Quibi         — streaming       2018–2020  tags: PMF mismatch, Market timing
+  2. Theranos      — healthtech      2003–2018  tags: Execution, Regulatory
+  3. Juicero       — hardware        2013–2017  tags: PMF mismatch, Cash flow
+  4. MoviePass     — subscriptions   2011–2019  tags: Cash flow, Execution
+  5. Vine          — social/video    2012–2017  tags: Competition, Pivot failure
+  6. Jawbone       — wearables       2010–2017  tags: Cash flow, Competition
+  7. Rdio          — music streaming 2008–2015  tags: Competition, Market timing
+  8. Yik Yak       — social          2013–2017  tags: Regulatory, PMF mismatch
+
+── FOOTER ───────────────────────────────────────────────────────────────────
+
+4-column footer (white bg, padding 64px 24px):
+  Col 1: "FounderAutopsy" wordmark + tagline "What killed the company. Precisely."
+  Col 2: Platform — Explore / Submit / Insights / About
+  Col 3: Resources — How it works / API / Open source
+  Col 4: "Built for founders, by founders."
+           "Free forever. No paywall."
+
+Footer column labels: JetBrains Mono 12px uppercase
+Footer links: Inter 400 14px #4d4d4d
+
+── DESIGN RULES (never break these) ─────────────────────────────────────────
+
+- NEVER use Inter weight 700+. Display ceiling is 600.
+- NEVER uppercase body or display headlines. Sentence-case always.
+- NEVER use a single heavy drop-shadow. Always use --shadow-card or --shadow-float.
+- NEVER miniaturize the mesh gradient. Hero band only, full atmospheric scale.
+- NEVER set body text in JetBrains Mono. Mono is for eyebrows, labels, AI output only.
+- ALWAYS alternate band rhythm: canvas-soft → white → dark → canvas-soft.
+- ALWAYS end hero H1 with a period. "What killed the company. Precisely."
+- Mobile: nav collapses to hamburger, 3-up grids → 1-up, pill CTAs keep full radius.

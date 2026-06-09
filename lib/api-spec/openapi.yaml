@@ -3,7 +3,7 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: PivotVault API — knowledge repository for startup failures
+  description: FounderAutopsy API — the first platform where founders document their own startup shutdowns
 servers:
   - url: /api
     description: Base API path
@@ -12,8 +12,6 @@ tags:
     description: Health operations
   - name: startups
     description: Startup postmortem operations
-  - name: auth
-    description: Authentication operations
   - name: insights
     description: Aggregated insights and analytics
 paths:
@@ -193,72 +191,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/FailuresByYearList"
 
-  /auth/register:
-    post:
-      operationId: register
-      tags: [auth]
-      summary: Register a new user
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AuthCredentials"
-      responses:
-        "201":
-          description: Registered
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthResponse"
-        "400":
-          description: Validation or duplicate error
-
-  /auth/login:
-    post:
-      operationId: login
-      tags: [auth]
-      summary: Login
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AuthCredentials"
-      responses:
-        "200":
-          description: Logged in
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthResponse"
-        "401":
-          description: Invalid credentials
-
-  /auth/me:
-    get:
-      operationId: getMe
-      tags: [auth]
-      summary: Get current user
-      responses:
-        "200":
-          description: Current user
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-        "401":
-          description: Unauthorized
-
-  /auth/logout:
-    post:
-      operationId: logout
-      tags: [auth]
-      summary: Logout
-      responses:
-        "200":
-          description: Logged out
-
 components:
   schemas:
     HealthStatus:
@@ -317,6 +249,8 @@ components:
           type: ["array", "null"]
           items:
             type: string
+        aiVerdict:
+          type: ["string", "null"]
         submittedBy:
           type: ["integer", "null"]
         createdAt:
@@ -431,44 +365,6 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/FailuresByYear"
-
-    AuthCredentials:
-      type: object
-      required:
-        - email
-        - password
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          minLength: 6
-
-    AuthResponse:
-      type: object
-      required:
-        - user
-        - token
-      properties:
-        user:
-          $ref: "#/components/schemas/User"
-        token:
-          type: string
-
-    User:
-      type: object
-      required:
-        - id
-        - email
-        - createdAt
-      properties:
-        id:
-          type: integer
-        email:
-          type: string
-        createdAt:
-          type: string
 
     ErrorResponse:
       type: object
