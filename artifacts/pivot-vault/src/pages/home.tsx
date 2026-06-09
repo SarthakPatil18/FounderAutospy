@@ -27,7 +27,7 @@ export default function Home() {
           </h1>
           
           <p className="text-lg md:text-xl text-[#4d4d4d] max-w-2xl mx-auto mb-10 leading-relaxed">
-            FounderAutopsy is the first open platform where founders document their own shutdowns — and AI performs the autopsy.
+            FounderAutospy is the first open platform where founders document their own shutdowns — and AI performs the autopsy.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">

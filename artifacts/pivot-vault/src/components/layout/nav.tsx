@@ -8,7 +8,7 @@ export function Nav() {
     <nav className="sticky top-0 z-50 w-full h-[64px] bg-white border-b border-[#ebebeb] flex items-center px-6 justify-between">
       <div className="flex-1 flex items-center">
         <Link href="/" className="font-sans font-semibold text-[#171717] text-lg hover:opacity-80 transition-opacity">
-          FounderAutopsy
+          FounderAutospy
         </Link>
       </div>
       
